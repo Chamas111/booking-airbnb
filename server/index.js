@@ -8,9 +8,10 @@ app.use(express.json());
 const jwt = require("jsonwebtoken");
 const PORT = process.env.PORT || 9000;
 const User = require("./models/User");
+const cookieParser = require("cookie-parser");
 const bcryptSalt = bcrypt.genSaltSync(10);
 app.use(cors({ origin: "http://localhost:3000", credentials: true }));
-
+app.use(cookieParser());
 mongoose.connect(process.env.MONGO_URL);
 app.get("/test", (req, res) => {
   res.json("test ok");
@@ -46,7 +47,7 @@ app.post("/login", async (req, res) => {
           {},
           (err, token) => {
             if (err) throw err;
-            res.cookie("token", token).json("pass ok");
+            res.cookie("token", token).json(userDoc);
           }
         );
       }
@@ -55,6 +56,20 @@ app.post("/login", async (req, res) => {
     }
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+app.get("/profile", (req, res) => {
+  const { token } = req.cookies;
+  if (token) {
+    jwt.verify(token, process.env.JWT_SECRET, {}, async (err, userData) => {
+      if (err) throw err;
+      const { name, email, _id } = await User.findById(userData.id);
+      res.json({ name, email, _id });
+      /*   const { name, email, _id } = await User.findById(userData.id);
+      res.json({ name, email, _id }); */
+    });
+  } else {
+    res.json(null);
   }
 });
 
