@@ -141,6 +141,7 @@ app.post("/places", async (req, res) => {
       maxGuests,
       price,
     });
+
     res.json(placeDoc);
   });
 });

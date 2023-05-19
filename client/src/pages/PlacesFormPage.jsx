@@ -3,11 +3,11 @@ import Perks from "../Perks";
 import axios from "axios";
 import PhotosUploader from "../PhotosUploader";
 import AccounNav from "../AccounNav";
-import { Navigate, useParams } from "react-router-dom";
+import { Navigate, useParams, useNavigate } from "react-router-dom";
 
 const PlacesFormPage = () => {
   const { id } = useParams();
-
+  const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [address, setAddress] = useState("");
   const [addedPhotos, setAddedPhotos] = useState([]);
@@ -35,39 +35,47 @@ const PlacesFormPage = () => {
       setCheckIn(data.checkIn);
       setCheckOut(data.checkOut);
       setMaxGuests(data.maxGuests);
+      setPrice(data.price);
     });
   }, [id]);
 
   async function savePlace(e) {
     e.preventDefault();
-    const placeData = {
-      title,
-      address,
-      addedPhotos,
-      description,
-      perks,
-      extraInfo,
-      checkIn,
-      checkOut,
-      maxGuests,
-      price,
-    };
-    if (id) {
-      await axios.put("places", {
-        id,
-        ...placeData,
-      });
-      setRedirect(true);
-    } else {
-      await axios.post("places", {
-        placeData,
-      });
-      setRedirect(true);
+    try {
+      const placeData = {
+        title,
+        address,
+        addedPhotos,
+        description,
+        perks,
+        extraInfo,
+        checkIn,
+        checkOut,
+        maxGuests,
+        price,
+      };
+      if (id) {
+        console.log(id);
+        await axios.put("places", {
+          id,
+          ...placeData,
+        });
+        setRedirect(true);
+      } else {
+        await axios
+          .post("places", placeData)
+          .then((res) => navigate("/account/places"));
+        console.log(placeData);
+        setRedirect(true);
+      }
+    } catch (err) {
+      console.log(err);
     }
   }
   if (redirect) {
     return <Navigate to={"/account/places"} />;
   }
+
   return (
     <>
       <div>
@@ -150,7 +158,7 @@ const PlacesFormPage = () => {
               />
             </div>
             <div>
-              <h3 className="mt-2 -mb-1">Preice per night</h3>
+              <h3 className="mt-2 -mb-1">Price per night</h3>
               <input
                 type="number"
                 value={price}

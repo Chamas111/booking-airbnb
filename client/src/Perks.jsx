@@ -16,7 +16,7 @@ const Perks = ({ selected, onChange }) => {
         <input
           type="checkbox"
           checked={selected.includes("wifi")}
-          name="Wifi"
+          name="wifi"
           onChange={handleCbClick}
         />
         <svg
