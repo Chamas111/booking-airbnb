@@ -3,7 +3,7 @@ const Place = require("./models/place");
 const imageDownloader = require("image-downloader");
 const cors = require("cors");
 const User = require("./models/User.js");
-
+const Booking = require("./models/Booking");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 require("dotenv").config();
@@ -16,6 +16,7 @@ const cookieParser = require("cookie-parser");
 const bcryptSalt = bcrypt.genSaltSync(10);
 const multer = require("multer");
 const fs = require("fs");
+const { resolve } = require("path");
 app.use(cors({ origin: "http://localhost:3000", credentials: true }));
 app.use(cookieParser());
 app.use("/uploads", express.static(__dirname + "/uploads"));
@@ -24,6 +25,20 @@ mongoose.connect(process.env.MONGO_URL);
 app.get("/test", (req, res) => {
   res.json("test ok");
 });
+
+function getUserDataFromToken(req) {
+  return new Promise((resolve, reject) => {
+    jwt.verify(
+      req.cookies.token,
+      process.env.JWT_SECRET,
+      {},
+      async (err, userData) => {
+        if (err) throw err;
+        resolve(userData);
+      }
+    );
+  });
+}
 
 /*register */
 app.post("/register", async (req, res) => {
@@ -205,6 +220,36 @@ app.put("/places", async (req, res) => {
 /*get all places in the home page*/
 app.get("/places", async (req, res) => {
   res.json(await Place.find());
+});
+
+/* create a Booking*/
+app.post("/bookings", async (req, res) => {
+  const userData = await getUserDataFromToken(req);
+  const { place, checkIn, checkOut, numberOfGuests, name, mobile, price } =
+    req.body;
+  Booking.create({
+    place,
+    checkIn,
+    checkOut,
+    numberOfGuests,
+    name,
+    mobile,
+    price,
+    user: userData.id,
+  })
+    .then((doc) => {
+      res.json(doc);
+    })
+    .catch((err) => {
+      throw err;
+    });
+});
+
+/* get all booking */
+
+app.get("/bookings", async (req, res) => {
+  const userData = await getUserDataFromToken(req);
+  res.json(await Booking.find({ user: userData.id }));
 });
 
 app.listen(PORT, () => console.log(`server is runing on port ${PORT}`));
