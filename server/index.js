@@ -249,7 +249,7 @@ app.post("/bookings", async (req, res) => {
 
 app.get("/bookings", async (req, res) => {
   const userData = await getUserDataFromToken(req);
-  res.json(await Booking.find({ user: userData.id }));
+  res.json(await Booking.find({ user: userData.id }).populate("place"));
 });
 
 app.listen(PORT, () => console.log(`server is runing on port ${PORT}`));
