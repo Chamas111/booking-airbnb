@@ -17,11 +17,10 @@ const bcryptSalt = bcrypt.genSaltSync(10);
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
-app.use(cors());
+app.use(cors({ origin: process.env.REACT_URL, credentials: true }));
 app.use(cookieParser());
 app.use("/uploads", express.static(__dirname + "/uploads"));
 console.log(__dirname);
-JWT_SECRET = somematchingdata;
 mongoose.connect(process.env.MONGO_URL);
 app.get("/test", (req, res) => {
   res.json("test ok");
@@ -29,10 +28,15 @@ app.get("/test", (req, res) => {
 
 function getUserDataFromToken(req) {
   return new Promise((resolve, reject) => {
-    jwt.verify(req.cookies.token, JWT_SECRET, {}, async (err, userData) => {
-      if (err) throw err;
-      resolve(userData);
-    });
+    jwt.verify(
+      req.cookies.token,
+      process.env.JWT_SECRET,
+      {},
+      async (err, userData) => {
+        if (err) throw err;
+        resolve(userData);
+      }
+    );
   });
 }
 
