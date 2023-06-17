@@ -13,7 +13,7 @@ import PlaceDetails from "./pages/PlaceDetails";
 import BookingsPage from "./pages/BookingsPage";
 import BookingPage from "./pages/BookingPage";
 function App() {
-  axios.defaults.baseURL = "http://localhost:8000";
+  axios.defaults.baseURL = process.env.REACT_APP_SERVER_BASE_URL;
   axios.defaults.withCredentials = true;
   return (
     <>
