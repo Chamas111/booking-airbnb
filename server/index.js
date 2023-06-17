@@ -16,7 +16,7 @@ const cookieParser = require("cookie-parser");
 const bcryptSalt = bcrypt.genSaltSync(10);
 const multer = require("multer");
 const fs = require("fs");
-const { resolve } = require("path");
+const path = require("path");
 app.use(cors({ origin: "http://localhost:3000", credentials: true }));
 app.use(cookieParser());
 app.use("/uploads", express.static(__dirname + "/uploads"));
@@ -252,4 +252,12 @@ app.get("/bookings", async (req, res) => {
   res.json(await Booking.find({ user: userData.id }).populate("place"));
 });
 
+if (process.env.NODE_ENV === "production") {
+  const buildPath = path.join(__dirname, "../client/build");
+  app.use(express.static(buildPath));
+
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(buildPath, "index.html"));
+  });
+}
 app.listen(PORT, () => console.log(`server is runing on port ${PORT}`));
