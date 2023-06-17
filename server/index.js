@@ -1,5 +1,5 @@
 const express = require("express");
-const Place = require("./models/place");
+const Place = require("./models/Place");
 const imageDownloader = require("image-downloader");
 const cors = require("cors");
 const User = require("./models/User.js");
