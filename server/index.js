@@ -17,7 +17,7 @@ const bcryptSalt = bcrypt.genSaltSync(10);
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
-app.use(cors({ origin: process.env.REACT_URL, credentials: true }));
+app.use(cors({ origin: "http://localhost:3000", credentials: true }));
 app.use(cookieParser());
 app.use("/uploads", express.static(__dirname + "/uploads"));
 console.log(__dirname);
