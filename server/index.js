@@ -10,14 +10,14 @@ require("dotenv").config();
 const app = express();
 app.use(express.json());
 const jwt = require("jsonwebtoken");
-const PORT = process.env.PORT || 9000;
+const PORT = process.env.PORT || 8000;
 
 const cookieParser = require("cookie-parser");
 const bcryptSalt = bcrypt.genSaltSync(10);
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
-app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true }));
 app.use(cookieParser());
 app.use("/uploads", express.static(__dirname + "/uploads"));
 console.log(__dirname);

@@ -31,7 +31,9 @@ function PlaceGallery({ place }) {
             place.photos.map((photo) => (
               <div>
                 <img
-                  src={"http://localhost:8000/uploads/" + photo}
+                  src={
+                    `${process.env.REACT_APP_SERVER_BASE_URL}/uploads/` + photo
+                  }
                   alt={place.title}
                 />
               </div>
