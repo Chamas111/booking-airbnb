@@ -57,7 +57,7 @@ const PlacesFormPage = () => {
       if (id) {
         console.log(id);
         console.log(placeData);
-        await axios.put("places", {
+        await axios.put("/places", {
           id,
           ...placeData,
         });
