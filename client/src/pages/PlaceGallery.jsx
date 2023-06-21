@@ -47,7 +47,7 @@ function PlaceGallery({ place }) {
               <img
                 onClick={() => setShowAllPhotos(true)}
                 className="aspect-square object-cover cursor-pointer"
-                src={`${process.env.REACT_APP_SERVER_BASE_URL}/uploads/${place.photos[0]}`}
+                src={`/uploads/${place.photos[0]}`}
                 alt={place.title}
               />
             </div>
