@@ -2,6 +2,7 @@ import React from "react";
 import { useState } from "react";
 function PlaceGallery({ place }) {
   const [showAllPhotos, setShowAllPhotos] = useState(false);
+  console.log(place);
   if (showAllPhotos) {
     return (
       <div className="absolute inset-0 bg-black text-white min-h-screen">
@@ -31,9 +32,7 @@ function PlaceGallery({ place }) {
             place.photos.map((photo) => (
               <div>
                 <img
-                  src={
-                    `${process.env.REACT_APP_SERVER_BASE_URL}/uploads/` + photo
-                  }
+                  src={`${process.env.REACT_APP_SERVER_BASE_URL}/uploads/${photo}`}
                   alt={place.title}
                 />
               </div>
@@ -51,10 +50,7 @@ function PlaceGallery({ place }) {
               <img
                 onClick={() => setShowAllPhotos(true)}
                 className="aspect-square object-cover cursor-pointer"
-                src={
-                  `${process.env.REACT_APP_SERVER_BASE_URL} /
-                  uploads/ ` + place.photos[0]
-                }
+                src={`${process.env.REACT_APP_SERVER_BASE_URL}/uploads/${place.photos[0]}`}
                 alt={place.title}
               />
             </div>
@@ -65,10 +61,7 @@ function PlaceGallery({ place }) {
             <img
               onClick={() => setShowAllPhotos(true)}
               className="aspect-square object-cover cursor-pointer"
-              src={
-                `${process.env.REACT_APP_SERVER_BASE_URL} /
-                uploads/` + place.photos[1]
-              }
+              src={`${process.env.REACT_APP_SERVER_BASE_URL}/uploads/${place.photos[1]}`}
               alt={place.title}
             />
           )}
@@ -77,10 +70,7 @@ function PlaceGallery({ place }) {
               <img
                 onClick={() => setShowAllPhotos(true)}
                 className="aspect-square object-cover relative top-2 cursor-pointer"
-                src={
-                  `${process.env.REACT_APP_SERVER_BASE_URL} /
-                  uploads/` + place.photos[2]
-                }
+                src={`${process.env.REACT_APP_SERVER_BASE_URL}/uploads/${place.photos[2]}`}
                 alt={place.title}
               />
             )}
