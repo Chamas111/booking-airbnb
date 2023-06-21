@@ -10,7 +10,7 @@ function PlaceImg({ place, index = 0, className = null }) {
   return (
     <img
       className={className}
-      src={`${process.env.REACT_APP_SERVER_BASE_URL}/uploads/${place.photos[index]}`}
+      src={`/uploads/${place.photos[index]}`}
       alt={place.title}
     />
   );
