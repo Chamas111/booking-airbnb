@@ -56,7 +56,12 @@ const PlacesFormPage = () => {
       };
       if (id) {
         console.log(id);
-        await axios.put("places/" + id, placeData);
+        console.log(placeData);
+        await axios.put("places", {
+          id,
+          ...placeData,
+        });
+        console.log(placeData);
         setRedirect(true);
       } else {
         await axios
