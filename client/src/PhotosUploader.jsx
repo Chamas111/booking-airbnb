@@ -69,7 +69,7 @@ const PhotosUploader = ({ addedPhotos, onChange }) => {
             <div className="flex h-32 relative" key={link}>
               <img
                 className="rounded-2xl w-full object-cover "
-                src={`${process.env.REACT_APP_SERVER_BASE_URL}/uploads/` + link}
+                src={`${process.env.REACT_APP_SERVER_BASE_URL}/uploads/${link}`}
               />
               <button
                 onClick={(e) => removePhoto(e, link)}
