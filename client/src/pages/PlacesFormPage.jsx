@@ -65,7 +65,7 @@ const PlacesFormPage = () => {
         setRedirect(true);
       } else {
         await axios
-          .post("places", placeData)
+          .post("/places", placeData)
           .then((res) => navigate("/account/places"));
         console.log(placeData);
         setRedirect(true);
