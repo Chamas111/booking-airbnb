@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, Navigate } from "react-router-dom";
-import axios from "axios";
+import axios from "../axiosInstance";
 import { useState, useContext } from "react";
 import { UserContext } from "../UserContext";
 const LoginPage = () => {

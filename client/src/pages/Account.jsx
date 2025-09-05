@@ -1,7 +1,7 @@
 import React, { useContext, useState } from "react";
 import { UserContext } from "../UserContext";
 import { Navigate, useParams } from "react-router-dom";
-import axios from "axios";
+import axios from "../axiosInstance";
 import PlacesPage from "./PlacesPage";
 import AccounNav from "../AccounNav";
 const Account = () => {
