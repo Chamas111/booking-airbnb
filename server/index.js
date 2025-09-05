@@ -1,25 +1,27 @@
 const express = require("express");
+const Place = require("./models/Place");
+const imageDownloader = require("image-downloader");
+const cors = require("cors");
+const User = require("./models/User.js");
+const Booking = require("./models/Booking");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+require("dotenv").config();
+const app = express();
+app.use(express.json());
 const jwt = require("jsonwebtoken");
+const PORT = process.env.PORT || 10000;
+
 const cookieParser = require("cookie-parser");
+const bcryptSalt = bcrypt.genSaltSync(10);
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
-const cors = require("cors");
-const imageDownloader = require("image-downloader");
 
-require("dotenv").config();
+app.use(cookieParser());
+app.use("/uploads", express.static(__dirname + "/uploads"));
+console.log(__dirname);
 
-const User = require("./models/User");
-const Place = require("./models/Place");
-const Booking = require("./models/Booking");
-
-const app = express();
-const PORT = process.env.PORT || 10000;
-const bcryptSalt = bcrypt.genSaltSync(10);
-
-// --- CORS ---
 const allowedOrigins = [
   "http://localhost:3000",
   process.env.FRONTEND_URL, // e.g., https://bookingappl.netlify.app
@@ -38,35 +40,26 @@ app.use(
     credentials: true,
   })
 );
+mongoose.connect(process.env.MONGO_URL);
+app.get("/test", (req, res) => {
+  res.json("test ok");
+});
 
-// --- Middlewares ---
-app.use(express.json());
-app.use(cookieParser());
-app.use("/uploads", express.static(path.join(__dirname, "/uploads")));
-
-// --- MongoDB Connection ---
-mongoose
-  .connect(process.env.MONGO_URL)
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.log(err));
-
-// --- Helpers ---
-async function getUserDataFromToken(req) {
-  const token = req.cookies?.token;
-  if (!token) return null;
+function getUserDataFromToken(req) {
   return new Promise((resolve, reject) => {
-    jwt.verify(token, process.env.JWT_SECRET, {}, (err, userData) => {
-      if (err) return reject(err);
-      resolve(userData);
-    });
+    jwt.verify(
+      req.cookies.token,
+      process.env.JWT_SECRET,
+      {},
+      async (err, userData) => {
+        if (err) throw err;
+        resolve(userData);
+      }
+    );
   });
 }
 
-// --- Routes ---
-
-app.get("/test", (req, res) => res.json("test ok"));
-
-// Register
+/*register */
 app.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -81,140 +74,201 @@ app.post("/register", async (req, res) => {
   }
 });
 
-// Login
+/*login */
+
 app.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    const userDoc = await User.findOne({ email });
-    if (!userDoc) return res.status(422).json("User not found");
-
-    const passOk = bcrypt.compareSync(password, userDoc.password);
-    if (!passOk) return res.status(422).json("Wrong password");
-
-    const token = jwt.sign(
-      { email: userDoc.email, id: userDoc._id },
-      process.env.JWT_SECRET
-    );
-    res
-      .cookie("token", token, {
-        httpOnly: true,
-        sameSite: "none",
-        secure: true,
-      })
-      .json(userDoc);
+    const userDoc = await User.findOne({ email }).maxTimeMS(20000);
+    if (userDoc) {
+      const passOk = bcrypt.compare(password, userDoc.password);
+      if (passOk) {
+        const token = jwt.sign(
+          { email: userDoc.email, id: userDoc._id },
+          process.env.JWT_SECRET,
+          {},
+          (err, token) => {
+            if (err) throw err;
+            res.cookie("token", token).json(userDoc);
+          }
+        );
+      }
+    } else {
+      res.status(422).json("pass not ok");
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
-// Profile
-app.get("/profile", async (req, res) => {
-  try {
-    const userData = await getUserDataFromToken(req);
-    if (!userData) return res.json(null);
-    const user = await User.findById(userData.id);
-    res.json({ name: user.name, email: user.email, _id: user._id });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+app.get("/profile", (req, res) => {
+  const { token } = req.cookies;
+  if (token) {
+    jwt.verify(token, process.env.JWT_SECRET, {}, async (err, userData) => {
+      if (err) throw err;
+      const { name, email, _id } = await User.findById(userData.id);
+      res.json({ name, email, _id });
+    });
+  } else {
+    res.json(null);
   }
 });
 
-// Logout
+/* logout*/
 app.post("/logout", (req, res) => {
   res.cookie("token", "").json(true);
 });
 
-// Upload images by link
+/*images uploads*/
 app.post("/upload-by-link", async (req, res) => {
   const { link } = req.body;
   const newName = "photo" + Date.now() + ".jpg";
   await imageDownloader.image({
     url: link,
-    dest: path.join(__dirname, "/uploads/", newName),
+    dest: __dirname + "/uploads/" + newName,
   });
   res.json(newName);
 });
 
-// Upload images by file
 const photosMiddleware = multer({ dest: "uploads/" });
 app.post("/upload", photosMiddleware.array("photos", 100), (req, res) => {
-  const uploadedFiles = req.files.map((file) => {
-    const ext = file.originalname.split(".").pop();
-    const newPath = file.path + "." + ext;
-    fs.renameSync(file.path, newPath);
-    return newPath.replace("uploads/", "");
-  });
+  const uploadedFiles = [];
+  for (let i = 0; i < req.files.length; i++) {
+    const { path, originalname } = req.files[i];
+    const parts = originalname.split(".");
+    const ext = parts[parts.length - 1];
+
+    const newPath = path + "." + ext;
+    fs.renameSync(path, newPath);
+    uploadedFiles.push(newPath.replace("uploads", ""));
+  }
   res.json(uploadedFiles);
 });
 
-// Places
+/*add form*/
+
 app.post("/places", async (req, res) => {
-  const userData = await getUserDataFromToken(req);
-  if (!userData) return res.status(401).json("Not authorized");
+  const { token } = req.cookies;
+  const {
+    title,
+    address,
+    addedPhotos,
+    description,
+    perks,
+    extraInfo,
+    checkIn,
+    checkOut,
+    maxGuests,
+    price,
+  } = req.body;
+  jwt.verify(token, process.env.JWT_SECRET, {}, async (err, userData) => {
+    if (err) throw err;
+    const placeDoc = await Place.create({
+      owner: userData.id,
+      title,
+      address,
+      photos: addedPhotos,
+      description,
+      perks,
+      extraInfo,
+      checkIn,
+      checkOut,
+      maxGuests,
+      price,
+    });
 
-  const placeDoc = await Place.create({ owner: userData.id, ...req.body });
-  res.json(placeDoc);
+    res.json(placeDoc);
+  });
 });
 
-app.get("/user-places", async (req, res) => {
-  const userData = await getUserDataFromToken(req);
-  if (!userData) return res.status(401).json("Not authorized");
-
-  res.json(await Place.find({ owner: userData.id }));
+/*get all places*/
+app.get("/user-places", (req, res) => {
+  const { token } = req.cookies;
+  jwt.verify(token, process.env.JWT_SECRET, {}, async (err, userData) => {
+    const { id } = userData;
+    res.json(await Place.find({ owner: id }));
+  });
 });
+
+/*get place by ID*/
 
 app.get("/places/:id", async (req, res) => {
-  const place = await Place.findById(req.params.id);
-  res.json(place);
+  const { id } = req.params;
+  res.json(await Place.findById(id));
 });
+
+/*update place*/
 
 app.put("/places", async (req, res) => {
-  const userData = await getUserDataFromToken(req);
-  if (!userData) return res.status(401).json("Not authorized");
+  const { token } = req.cookies;
+  const {
+    id,
+    title,
+    address,
+    addedPhotos,
+    description,
+    perks,
+    extraInfo,
+    checkIn,
+    checkOut,
+    maxGuests,
+    price,
+  } = req.body;
 
-  const { id, ...updateData } = req.body;
-  const placeDoc = await Place.findById(id);
-  if (placeDoc.owner.toString() !== userData.id)
-    return res.status(403).json("Forbidden");
-
-  Object.assign(placeDoc, updateData);
-  await placeDoc.save();
-  res.json("ok");
+  jwt.verify(token, process.env.JWT_SECRET, {}, async (err, userData) => {
+    if (err) throw err;
+    const placeDoc = await Place.findById(id);
+    if (userData.id === placeDoc.owner.toString()) {
+      placeDoc.set({
+        title,
+        address,
+        photos: addedPhotos,
+        description,
+        perks,
+        extraInfo,
+        checkIn,
+        checkOut,
+        maxGuests,
+        price,
+      });
+      await placeDoc.save();
+      res.json("ok");
+    }
+  });
 });
 
-// Get all places (home page)
+/*get all places in the home page*/
 app.get("/places", async (req, res) => {
   res.json(await Place.find());
 });
 
-// Bookings
+/* create a Booking*/
 app.post("/bookings", async (req, res) => {
   const userData = await getUserDataFromToken(req);
-  if (!userData) return res.status(401).json("Not authorized");
-
-  const booking = await Booking.create({ ...req.body, user: userData.id });
-  res.json(booking);
+  const { place, checkIn, checkOut, numberOfGuests, name, mobile, price } =
+    req.body;
+  Booking.create({
+    place,
+    checkIn,
+    checkOut,
+    numberOfGuests,
+    name,
+    mobile,
+    price,
+    user: userData.id,
+  })
+    .then((doc) => {
+      res.json(doc);
+    })
+    .catch((err) => {
+      throw err;
+    });
 });
+
+/* get all booking */
 
 app.get("/bookings", async (req, res) => {
   const userData = await getUserDataFromToken(req);
-  if (!userData) return res.status(401).json("Not authorized");
-
-  const bookings = await Booking.find({ user: userData.id }).populate("place");
-  res.json(bookings);
+  res.json(await Booking.find({ user: userData.id }).populate("place"));
 });
 
-// --- Serve React in production ---
-if (process.env.NODE_ENV === "production") {
-  const buildPath = path.join(__dirname, "../client/build");
-  if (fs.existsSync(buildPath)) {
-    app.use(express.static(buildPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(buildPath, "index.html"));
-    });
-  } else {
-    console.warn("React build folder not found:", buildPath);
-  }
-}
-
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`server is runing on port ${PORT}`));
