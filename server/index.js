@@ -10,7 +10,7 @@ require("dotenv").config();
 const app = express();
 app.use(express.json());
 const jwt = require("jsonwebtoken");
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 10000;
 
 const cookieParser = require("cookie-parser");
 const bcryptSalt = bcrypt.genSaltSync(10);

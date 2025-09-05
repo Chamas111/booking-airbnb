@@ -1,5 +1,5 @@
 import "./App.css";
-import axios from "axios";
+import axios from "../src/axiosInstance";
 import { Routes, Route } from "react-router-dom";
 import IndexPages from "./pages/IndexPages";
 import LoginPage from "./pages/LoginPage";

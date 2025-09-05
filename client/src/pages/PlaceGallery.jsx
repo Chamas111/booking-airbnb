@@ -31,7 +31,10 @@ function PlaceGallery({ place }) {
           {place?.photos?.length > 0 &&
             place.photos.map((photo) => (
               <div>
-                <img src={`/uploads/${photo}`} alt={place.title} />
+                <img
+                  src={`${process.env.REACT_APP_SERVER_BASE_URL}/uploads/${photo}`}
+                  alt={place.title}
+                />
               </div>
             ))}
         </div>
@@ -47,7 +50,7 @@ function PlaceGallery({ place }) {
               <img
                 onClick={() => setShowAllPhotos(true)}
                 className="aspect-square object-cover cursor-pointer"
-                src={`/uploads/${place.photos[0]}`}
+                src={`${process.env.REACT_APP_SERVER_BASE_URL}/uploads/${place.photos[0]}`}
                 alt={place.title}
               />
             </div>
@@ -58,7 +61,7 @@ function PlaceGallery({ place }) {
             <img
               onClick={() => setShowAllPhotos(true)}
               className="aspect-square object-cover cursor-pointer"
-              src={`/uploads/${place.photos[1]}`}
+              src={`${process.env.REACT_APP_SERVER_BASE_URL}/uploads/${place.photos[1]}`}
               alt={place.title}
             />
           )}
@@ -67,7 +70,7 @@ function PlaceGallery({ place }) {
               <img
                 onClick={() => setShowAllPhotos(true)}
                 className="aspect-square object-cover relative top-2 cursor-pointer"
-                src={`/uploads/${place.photos[2]}`}
+                src={`${process.env.REACT_APP_SERVER_BASE_URL}/uploads/${place.photos[2]}`}
                 alt={place.title}
               />
             )}
