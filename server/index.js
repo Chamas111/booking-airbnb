@@ -252,12 +252,4 @@ app.get("/bookings", async (req, res) => {
   res.json(await Booking.find({ user: userData.id }).populate("place"));
 });
 
-if (process.env.NODE_ENV === "production") {
-  const buildPath = path.join(__dirname, "../client/build");
-  app.use(express.static(buildPath));
-
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(buildPath, "index.html"));
-  });
-}
 app.listen(PORT, () => console.log(`server is runing on port ${PORT}`));
