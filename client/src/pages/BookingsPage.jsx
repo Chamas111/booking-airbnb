@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import AccounNav from "../AccounNav";
 import axios from "../axiosInstance";
-import { differenceInCalendarDays, format } from "date-fns";
+import { differenceInCalendarDays } from "date-fns";
 import { Link } from "react-router-dom";
 import PlaceImg from "./PlaceImg";
 const BookingsPage = () => {

@@ -8,12 +8,19 @@ export function UserContextProvider({ children }) {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     if (!user) {
-      const { data } = axios.get("/profile").then(({ data }) => {
-        setUser(data);
-        setReady(true);
-      });
+      const fetchUser = async () => {
+        try {
+          const response = await axios.get("/profile");
+          setUser(response.data);
+        } catch (err) {
+          console.error("Error fetching user:", err);
+        } finally {
+          setReady(true);
+        }
+      };
+      fetchUser();
     }
-  }, []);
+  }, [user]);
   return (
     <UserContext.Provider value={{ user, setUser, ready }}>
       {children}

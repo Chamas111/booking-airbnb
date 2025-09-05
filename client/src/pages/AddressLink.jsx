@@ -10,6 +10,7 @@ function AddressLink({ children, className = "" }) {
     <a
       className={className}
       target="_blank"
+      rel="noreferrer"
       href={"https://maps.google.com/?q=" + children}
     >
       <svg
