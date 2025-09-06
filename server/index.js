@@ -33,7 +33,7 @@ app.use("/uploads", express.static(uploadsDir));
 // CORS setup
 const allowedOrigins = [
   process.env.FRONTEND_URL, // e.g. https://yourapp.netlify.app
-  "https://bookingappl.netlify.app/",
+  "https://bookingappl.netlify.app",
 ];
 app.use(
   cors({
