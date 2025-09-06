@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "../axiosInstance"; // ✅ use shared instance
+import axios from "../src/axiosInstance"; // ✅ use shared instance
 
 const PhotosUploader = ({ addedPhotos, onChange }) => {
   const [photoLink, setPhotoLink] = useState("");
