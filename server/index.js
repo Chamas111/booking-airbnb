@@ -1,4 +1,4 @@
-// index.js (Updated)
+// index.js
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
@@ -8,7 +8,7 @@ const jwt = require("jsonwebtoken");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
-const axios = require("axios"); // use axios for link downloads
+const axios = require("axios");
 require("dotenv").config();
 
 const app = express();
@@ -27,17 +27,22 @@ app.use(cookieParser());
 const uploadsDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 
-// Serve static uploads
+// Serve uploads statically
 app.use("/uploads", express.static(uploadsDir));
 
-// CORS
-const allowedOrigins = [process.env.FRONTEND_URL, "http://localhost:3000"];
+// CORS setup
+const allowedOrigins = [
+  process.env.FRONTEND_URL ||
+    "https://68bb9100a02580e6b1a7c7f8--bookingappl.netlify.app",
+  "http://localhost:3000",
+];
 app.use(
   cors({
     origin: function (origin, callback) {
       if (!origin) return callback(null, true); // allow non-browser requests
-      if (!allowedOrigins.includes(origin))
+      if (!allowedOrigins.includes(origin)) {
         return callback(new Error("CORS not allowed"), false);
+      }
       return callback(null, true);
     },
     credentials: true,
@@ -45,9 +50,12 @@ app.use(
 );
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URL);
+mongoose.connect(process.env.MONGO_URL, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+});
 
-// Utility: Get user from token
+// Utility: get user from token
 function getUserDataFromToken(req) {
   return new Promise((resolve, reject) => {
     const token = req.cookies.token;
@@ -59,11 +67,7 @@ function getUserDataFromToken(req) {
   });
 }
 
-// ----------------- Routes -----------------
-
-app.get("/", (req, res) => res.send("Server is running ✅"));
-
-// Auth routes
+// ----------------- Auth routes -----------------
 app.post("/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -94,7 +98,7 @@ app.post("/login", async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: "none",
-        maxAge: 1000 * 60 * 60 * 24 * 7,
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
       })
       .json(user);
   } catch (err) {
@@ -117,9 +121,9 @@ app.get("/profile", async (req, res) => {
   }
 });
 
-// ----------------- File upload -----------------
+// ----------------- File uploads -----------------
 
-// Multer setup
+// Multer setup for local file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
@@ -130,7 +134,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Upload local files
+// Local file upload
 app.post("/upload", upload.array("photos", 100), (req, res) => {
   const filenames = req.files.map((file) => file.filename);
   res.json(filenames);
@@ -140,22 +144,28 @@ app.post("/upload", upload.array("photos", 100), (req, res) => {
 app.post("/upload-by-link", async (req, res) => {
   const { link } = req.body;
   try {
-    const ext = path.extname(link) || ".jpg";
+    // Get file extension from content-type if possible
+    const response = await axios.get(link, { responseType: "arraybuffer" });
+    const contentType = response.headers["content-type"];
+    let ext = ".jpg";
+    if (contentType) {
+      if (contentType.includes("png")) ext = ".png";
+      else if (contentType.includes("jpeg")) ext = ".jpg";
+      else if (contentType.includes("gif")) ext = ".gif";
+    }
+
     const filename = Date.now() + "-" + Math.round(Math.random() * 1e9) + ext;
     const filePath = path.join(uploadsDir, filename);
-
-    const response = await axios.get(link, { responseType: "arraybuffer" });
     fs.writeFileSync(filePath, response.data);
 
     res.json(filename);
   } catch (err) {
-    console.error("❌ Upload by link error:", err);
-    res.status(500).json({ error: "Failed to upload image by link" });
+    console.error("❌ Upload by link failed:", err.message);
+    res.status(400).json({ error: "Cannot download image from provided link" });
   }
 });
 
 // ----------------- Place routes -----------------
-
 app.post("/places", async (req, res) => {
   try {
     const userData = await getUserDataFromToken(req);
@@ -199,7 +209,6 @@ app.get("/places", async (req, res) => {
 });
 
 // ----------------- Booking routes -----------------
-
 app.post("/bookings", async (req, res) => {
   try {
     const userData = await getUserDataFromToken(req);
@@ -226,7 +235,7 @@ app.get("/bookings", async (req, res) => {
   }
 });
 
-// Start server
+// ----------------- Start server -----------------
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
 });
