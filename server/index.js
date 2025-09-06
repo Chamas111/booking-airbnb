@@ -1,9 +1,13 @@
+// index.js
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const multer = require("multer");
+const fs = require("fs");
+const path = require("path");
 require("dotenv").config();
 
 const app = express();
@@ -17,7 +21,12 @@ const Booking = require("./models/Booking");
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
-app.use("/uploads", express.static(__dirname + "/uploads"));
+
+// Ensure uploads folder exists
+const uploadsDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+
+app.use("/uploads", express.static(uploadsDir));
 
 // CORS
 const allowedOrigins = [process.env.FRONTEND_URL, "http://localhost:3000"];
@@ -25,12 +34,11 @@ app.use(
   cors({
     origin: function (origin, callback) {
       if (!origin) return callback(null, true); // allow non-browser requests
-      if (!allowedOrigins.includes(origin)) {
+      if (!allowedOrigins.includes(origin))
         return callback(new Error("CORS not allowed"), false);
-      }
       return callback(null, true);
     },
-    credentials: true, // allow cookies
+    credentials: true,
   })
 );
 
@@ -42,7 +50,6 @@ function getUserDataFromToken(req) {
   return new Promise((resolve, reject) => {
     const token = req.cookies.token;
     if (!token) return resolve(null);
-
     jwt.verify(token, process.env.JWT_SECRET, {}, (err, userData) => {
       if (err) return reject(err);
       resolve(userData);
@@ -51,22 +58,9 @@ function getUserDataFromToken(req) {
 }
 
 // Test routes
-app.get("/", (req, res) => {
-  res.send("Server is running ✅");
-});
-app.get("/test", (req, res) => res.json("Server is working"));
+app.get("/", (req, res) => res.send("Server is running ✅"));
+app.get("/test", (req, res) => res.json("Server works"));
 app.get("/test-cors", (req, res) => res.json({ msg: "CORS works" }));
-app.get("/test-login-cors", (req, res) => {
-  const token = "dummy-token";
-  res
-    .cookie("token", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      maxAge: 1000 * 60 * 60,
-    })
-    .json({ msg: "Cookie set" });
-});
 
 // Auth routes
 app.post("/register", async (req, res) => {
@@ -120,6 +114,33 @@ app.get("/profile", async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// File upload
+const photosMiddleware = multer({ dest: "uploads/" });
+
+app.post("/upload", photosMiddleware.array("photos", 100), (req, res) => {
+  const uploadedFiles = [];
+  for (let i = 0; i < req.files.length; i++) {
+    const { path: filePath, originalname } = req.files[i];
+    const ext = originalname.split(".").pop();
+    const newPath = filePath + "." + ext;
+    fs.renameSync(filePath, newPath);
+    uploadedFiles.push(path.basename(newPath));
+  }
+  res.json(uploadedFiles);
+});
+
+app.post("/upload-by-link", async (req, res) => {
+  const { link } = req.body;
+  const newName = "photo" + Date.now() + ".jpg";
+  const destPath = path.join(__dirname, "uploads", newName);
+
+  const response = await fetch(link);
+  const buffer = await response.arrayBuffer();
+  fs.writeFileSync(destPath, Buffer.from(buffer));
+
+  res.json(newName);
 });
 
 // Place routes
