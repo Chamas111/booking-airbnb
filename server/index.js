@@ -133,21 +133,18 @@ const upload = multer({ storage });
 // Upload local files → Cloudinary
 app.post("/upload", upload.array("photos", 100), async (req, res) => {
   try {
-    const uploadPromises = req.files.map((file) =>
-      cloudinary.uploader.upload(file.path, { folder: "bookingapp" })
-    );
-
-    const results = await Promise.all(uploadPromises);
-
-    // Delete local temp files
-    req.files.forEach((file) => fs.unlinkSync(file.path));
-
-    // Return Cloudinary URLs
-    const urls = results.map((r) => r.secure_url);
-    res.json(urls);
+    const urls = [];
+    for (const file of req.files) {
+      const result = await cloudinary.uploader.upload(file.path, {
+        folder: "bookingapp",
+      });
+      urls.push(result.secure_url);
+      fs.unlinkSync(file.path); // remove local file after uploading
+    }
+    res.json(urls); // return full URLs
   } catch (err) {
-    console.error("❌ Upload failed:", err.message);
-    res.status(500).json({ error: "Upload to Cloudinary failed" });
+    console.error(err);
+    res.status(500).json({ error: "Upload failed" });
   }
 });
 
@@ -158,10 +155,10 @@ app.post("/upload-by-link", async (req, res) => {
     const result = await cloudinary.uploader.upload(link, {
       folder: "bookingapp",
     });
-    res.json(result.secure_url);
+    res.json(result.secure_url); // return full URL
   } catch (err) {
-    console.error("❌ Upload by link failed:", err.message);
-    res.status(400).json({ error: "Cannot upload image from link" });
+    console.error(err);
+    res.status(400).json({ error: "Cannot upload image from provided link" });
   }
 });
 
