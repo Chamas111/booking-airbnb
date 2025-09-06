@@ -1,4 +1,4 @@
-// index.js
+// index.js (Updated)
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
@@ -8,6 +8,7 @@ const jwt = require("jsonwebtoken");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
+const axios = require("axios"); // use axios for link downloads
 require("dotenv").config();
 
 const app = express();
@@ -26,6 +27,7 @@ app.use(cookieParser());
 const uploadsDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 
+// Serve static uploads
 app.use("/uploads", express.static(uploadsDir));
 
 // CORS
@@ -45,7 +47,7 @@ app.use(
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URL);
 
-// Utility to get user from token
+// Utility: Get user from token
 function getUserDataFromToken(req) {
   return new Promise((resolve, reject) => {
     const token = req.cookies.token;
@@ -57,10 +59,9 @@ function getUserDataFromToken(req) {
   });
 }
 
-// Test routes
+// ----------------- Routes -----------------
+
 app.get("/", (req, res) => res.send("Server is running ✅"));
-app.get("/test", (req, res) => res.json("Server works"));
-app.get("/test-cors", (req, res) => res.json({ msg: "CORS works" }));
 
 // Auth routes
 app.post("/register", async (req, res) => {
@@ -93,7 +94,7 @@ app.post("/login", async (req, res) => {
         httpOnly: true,
         secure: true,
         sameSite: "none",
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+        maxAge: 1000 * 60 * 60 * 24 * 7,
       })
       .json(user);
   } catch (err) {
@@ -116,34 +117,45 @@ app.get("/profile", async (req, res) => {
   }
 });
 
-// File upload
-const photosMiddleware = multer({ dest: "uploads/" });
+// ----------------- File upload -----------------
 
-app.post("/upload", photosMiddleware.array("photos", 100), (req, res) => {
-  const uploadedFiles = [];
-  for (let i = 0; i < req.files.length; i++) {
-    const { path: filePath, originalname } = req.files[i];
-    const ext = originalname.split(".").pop();
-    const newPath = filePath + "." + ext;
-    fs.renameSync(filePath, newPath);
-    uploadedFiles.push(path.basename(newPath));
-  }
-  res.json(uploadedFiles);
+// Multer setup
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9) + ext;
+    cb(null, uniqueName);
+  },
+});
+const upload = multer({ storage });
+
+// Upload local files
+app.post("/upload", upload.array("photos", 100), (req, res) => {
+  const filenames = req.files.map((file) => file.filename);
+  res.json(filenames);
 });
 
+// Upload by link
 app.post("/upload-by-link", async (req, res) => {
   const { link } = req.body;
-  const newName = "photo" + Date.now() + ".jpg";
-  const destPath = path.join(__dirname, "uploads", newName);
+  try {
+    const ext = path.extname(link) || ".jpg";
+    const filename = Date.now() + "-" + Math.round(Math.random() * 1e9) + ext;
+    const filePath = path.join(uploadsDir, filename);
 
-  const response = await fetch(link);
-  const buffer = await response.arrayBuffer();
-  fs.writeFileSync(destPath, Buffer.from(buffer));
+    const response = await axios.get(link, { responseType: "arraybuffer" });
+    fs.writeFileSync(filePath, response.data);
 
-  res.json(newName);
+    res.json(filename);
+  } catch (err) {
+    console.error("❌ Upload by link error:", err);
+    res.status(500).json({ error: "Failed to upload image by link" });
+  }
 });
 
-// Place routes
+// ----------------- Place routes -----------------
+
 app.post("/places", async (req, res) => {
   try {
     const userData = await getUserDataFromToken(req);
@@ -186,7 +198,8 @@ app.get("/places", async (req, res) => {
   }
 });
 
-// Booking routes
+// ----------------- Booking routes -----------------
+
 app.post("/bookings", async (req, res) => {
   try {
     const userData = await getUserDataFromToken(req);
@@ -213,6 +226,7 @@ app.get("/bookings", async (req, res) => {
   }
 });
 
+// Start server
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
 });
