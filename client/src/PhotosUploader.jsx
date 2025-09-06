@@ -1,36 +1,38 @@
 import React, { useState } from "react";
-import axios from "../src/axiosInstance"; // ✅ use shared instance
+import axios from "../src/axiosInstance";
 
 const PhotosUploader = ({ addedPhotos, onChange }) => {
   const [photoLink, setPhotoLink] = useState("");
   const [uploading, setUploading] = useState(false);
-  // Upload a photo by link
+
+  // Upload photo by link
   async function addPhotoByLink(e) {
     e.preventDefault();
     try {
-      const { data: filename } = await axios.post("/upload-by-link", {
+      const { data: url } = await axios.post("/upload-by-link", {
         link: photoLink,
       });
-      onChange((prev) => [...prev, filename]);
+      onChange((prev) => [...prev, url]);
       setPhotoLink("");
     } catch (err) {
       console.error("❌ Upload by link failed:", err);
     }
   }
 
-  // Upload photos by file
+  // Upload photos from local files
   async function uploadPhoto(e) {
     const files = e.target.files;
     const data = new FormData();
     for (let i = 0; i < files.length; i++) {
       data.append("photos", files[i]);
     }
+
     setUploading(true);
     try {
-      const { data: filenames } = await axios.post("/upload", data, {
+      const { data: urls } = await axios.post("/upload", data, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      onChange((prev) => [...prev, ...filenames]);
+      onChange((prev) => [...prev, ...urls]);
     } catch (err) {
       console.error("❌ Upload failed:", err);
     } finally {
@@ -38,18 +40,14 @@ const PhotosUploader = ({ addedPhotos, onChange }) => {
     }
   }
 
-  function removePhoto(e, filename) {
+  function removePhoto(e, url) {
     e.preventDefault();
-    onChange(addedPhotos.filter((photo) => photo !== filename));
+    onChange(addedPhotos.filter((photo) => photo !== url));
   }
 
-  function selectMainPhoto(e, filename) {
+  function selectMainPhoto(e, url) {
     e.preventDefault();
-    const updatedPhotos = [
-      filename,
-      ...addedPhotos.filter((p) => p !== filename),
-    ];
-    onChange(updatedPhotos);
+    onChange([url, ...addedPhotos.filter((p) => p !== url)]);
   }
 
   return (
@@ -66,35 +64,35 @@ const PhotosUploader = ({ addedPhotos, onChange }) => {
           className="bg-gray-200 px-4 rounded-2xl"
           onClick={addPhotoByLink}
         >
-          Add&nbsp;Photo
+          Add Photo
         </button>
       </div>
 
       {/* Show uploaded photos */}
       <div className="mt-2 gap-2 grid grid-cols-3 md:grid-cols-4">
         {addedPhotos.length > 0 &&
-          addedPhotos.map((link) => (
-            <div className="flex h-32 relative" key={link}>
+          addedPhotos.map((url) => (
+            <div className="flex h-32 relative" key={url}>
               <img
                 className="rounded-2xl w-full object-cover"
-                src={link}
+                src={url} // ✅ full Cloudinary URL
                 alt="Uploaded"
               />
 
-              {/* Remove photo button */}
+              {/* Remove photo */}
               <button
-                onClick={(e) => removePhoto(e, link)}
-                className="cursor-pointer absolute bottom-1 right-1 text-white bg-black p-1 bg-opacity-50 rounded-2xl py-2 px-3"
+                onClick={(e) => removePhoto(e, url)}
+                className="cursor-pointer absolute bottom-1 right-1 text-white bg-black bg-opacity-50 rounded-2xl py-2 px-3"
               >
                 ✖
               </button>
 
-              {/* Select main photo button */}
+              {/* Select main photo */}
               <button
-                onClick={(e) => selectMainPhoto(e, link)}
-                className="cursor-pointer absolute bottom-1 left-1 text-white bg-black p-1 bg-opacity-50 rounded-2xl py-2 px-3"
+                onClick={(e) => selectMainPhoto(e, url)}
+                className="cursor-pointer absolute bottom-1 left-1 text-white bg-black bg-opacity-50 rounded-2xl py-2 px-3"
               >
-                {link === addedPhotos[0] ? "⭐" : "☆"}
+                {url === addedPhotos[0] ? "⭐" : "☆"}
               </button>
             </div>
           ))}
