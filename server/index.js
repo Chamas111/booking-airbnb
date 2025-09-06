@@ -12,7 +12,7 @@ const axios = require("axios");
 require("dotenv").config();
 
 const app = express();
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 8000;
 
 // Models
 const User = require("./models/User");
@@ -32,9 +32,8 @@ app.use("/uploads", express.static(uploadsDir));
 
 // CORS setup
 const allowedOrigins = [
-  process.env.FRONTEND_URL ||
-    "https://68bb9100a02580e6b1a7c7f8--bookingappl.netlify.app",
-  "http://localhost:3000",
+  process.env.FRONTEND_URL, // e.g. https://yourapp.netlify.app
+  "https://bookingappl.netlify.app/",
 ];
 app.use(
   cors({
