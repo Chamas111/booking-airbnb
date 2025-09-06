@@ -8,31 +8,31 @@ const jwt = require("jsonwebtoken");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
-const axios = require("axios");
+const cloudinary = require("cloudinary").v2;
 require("dotenv").config();
 
 const app = express();
 const PORT = process.env.PORT || 8000;
 
-// Models
+// ----------------- Cloudinary config -----------------
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// ----------------- Models -----------------
 const User = require("./models/User");
 const Place = require("./models/Place");
 const Booking = require("./models/Booking");
 
-// Middleware
+// ----------------- Middleware -----------------
 app.use(express.json());
 app.use(cookieParser());
 
-// Ensure uploads folder exists
-const uploadsDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
-
-// Serve uploads statically
-app.use("/uploads", express.static(uploadsDir));
-
-// CORS setup
+// ----------------- CORS -----------------
 const allowedOrigins = [
-  process.env.FRONTEND_URL, // e.g. https://yourapp.netlify.app
+  process.env.FRONTEND_URL,
   "https://bookingappl.netlify.app",
 ];
 app.use(
@@ -48,13 +48,13 @@ app.use(
   })
 );
 
-// Connect to MongoDB
+// ----------------- MongoDB -----------------
 mongoose.connect(process.env.MONGO_URL, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
 
-// Utility: get user from token
+// ----------------- Utility: get user from token -----------------
 function getUserDataFromToken(req) {
   return new Promise((resolve, reject) => {
     const token = req.cookies.token;
@@ -122,45 +122,46 @@ app.get("/profile", async (req, res) => {
 
 // ----------------- File uploads -----------------
 
-// Multer setup for local file uploads
+// Multer setup for temp file storage
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9) + ext;
-    cb(null, uniqueName);
-  },
+  destination: (req, file, cb) => cb(null, "uploads/"),
+  filename: (req, file, cb) =>
+    cb(null, Date.now() + path.extname(file.originalname)),
 });
 const upload = multer({ storage });
 
-// Local file upload
-app.post("/upload", upload.array("photos", 100), (req, res) => {
-  const filenames = req.files.map((file) => file.filename);
-  res.json(filenames);
+// Upload local files → Cloudinary
+app.post("/upload", upload.array("photos", 100), async (req, res) => {
+  try {
+    const uploadPromises = req.files.map((file) =>
+      cloudinary.uploader.upload(file.path, { folder: "bookingapp" })
+    );
+
+    const results = await Promise.all(uploadPromises);
+
+    // Delete local temp files
+    req.files.forEach((file) => fs.unlinkSync(file.path));
+
+    // Return Cloudinary URLs
+    const urls = results.map((r) => r.secure_url);
+    res.json(urls);
+  } catch (err) {
+    console.error("❌ Upload failed:", err.message);
+    res.status(500).json({ error: "Upload to Cloudinary failed" });
+  }
 });
 
-// Upload by link
+// Upload by link → Cloudinary
 app.post("/upload-by-link", async (req, res) => {
   const { link } = req.body;
   try {
-    // Get file extension from content-type if possible
-    const response = await axios.get(link, { responseType: "arraybuffer" });
-    const contentType = response.headers["content-type"];
-    let ext = ".jpg";
-    if (contentType) {
-      if (contentType.includes("png")) ext = ".png";
-      else if (contentType.includes("jpeg")) ext = ".jpg";
-      else if (contentType.includes("gif")) ext = ".gif";
-    }
-
-    const filename = Date.now() + "-" + Math.round(Math.random() * 1e9) + ext;
-    const filePath = path.join(uploadsDir, filename);
-    fs.writeFileSync(filePath, response.data);
-
-    res.json(filename);
+    const result = await cloudinary.uploader.upload(link, {
+      folder: "bookingapp",
+    });
+    res.json(result.secure_url);
   } catch (err) {
     console.error("❌ Upload by link failed:", err.message);
-    res.status(400).json({ error: "Cannot download image from provided link" });
+    res.status(400).json({ error: "Cannot upload image from link" });
   }
 });
 
@@ -233,6 +234,8 @@ app.get("/bookings", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ----------------- Health check -----------------
 app.get("/", (req, res) => {
   res.send("✅ Server is running");
 });
