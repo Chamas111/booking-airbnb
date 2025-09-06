@@ -3,7 +3,7 @@ import axios from "../src/axiosInstance"; // ✅ use shared instance
 
 const PhotosUploader = ({ addedPhotos, onChange }) => {
   const [photoLink, setPhotoLink] = useState("");
-
+  const [uploading, setUploading] = useState(false);
   // Upload a photo by link
   async function addPhotoByLink(e) {
     e.preventDefault();
@@ -23,9 +23,9 @@ const PhotosUploader = ({ addedPhotos, onChange }) => {
     const files = e.target.files;
     const data = new FormData();
     for (let i = 0; i < files.length; i++) {
-      data.append("photos", files[i]); // field name must match multer config
+      data.append("photos", files[i]);
     }
-
+    setUploading(true);
     try {
       const { data: filenames } = await axios.post("/upload", data, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -33,6 +33,8 @@ const PhotosUploader = ({ addedPhotos, onChange }) => {
       onChange((prev) => [...prev, ...filenames]);
     } catch (err) {
       console.error("❌ Upload failed:", err);
+    } finally {
+      setUploading(false);
     }
   }
 
