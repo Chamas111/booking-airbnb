@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "../src/axiosInstance";
+import axios from "../src/axiosInstance"; // ✅ use shared instance
 
 const PhotosUploader = ({ addedPhotos, onChange }) => {
   const [photoLink, setPhotoLink] = useState("");
@@ -7,29 +7,33 @@ const PhotosUploader = ({ addedPhotos, onChange }) => {
   // Upload a photo by link
   async function addPhotoByLink(e) {
     e.preventDefault();
-    const { data: filename } = await axios.post(
-      `${process.env.REACT_APP_SERVER_BASE_URL}/upload-by-link`,
-      { link: photoLink }
-    );
-    onChange((prev) => [...prev, filename]);
-    setPhotoLink("");
+    try {
+      const { data: filename } = await axios.post("/upload-by-link", {
+        link: photoLink,
+      });
+      onChange((prev) => [...prev, filename]);
+      setPhotoLink("");
+    } catch (err) {
+      console.error("❌ Upload by link failed:", err);
+    }
   }
 
-  // Upload a photo by file
-  function uploadPhoto(e) {
+  // Upload photos by file
+  async function uploadPhoto(e) {
     const files = e.target.files;
     const data = new FormData();
     for (let i = 0; i < files.length; i++) {
-      data.append("photos", files[i]);
+      data.append("photos", files[i]); // field name must match multer config
     }
 
-    axios
-      .post(`${process.env.REACT_APP_SERVER_BASE_URL}/upload`, data)
-      .then((response) => {
-        const { data: filenames } = response;
-        onChange((prev) => [...prev, ...filenames]);
-      })
-      .catch((err) => console.error("❌ Upload failed:", err));
+    try {
+      const { data: filenames } = await axios.post("/upload", data, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      onChange((prev) => [...prev, ...filenames]);
+    } catch (err) {
+      console.error("❌ Upload failed:", err);
+    }
   }
 
   function removePhoto(e, filename) {
@@ -71,7 +75,7 @@ const PhotosUploader = ({ addedPhotos, onChange }) => {
             <div className="flex h-32 relative" key={link}>
               <img
                 className="rounded-2xl w-full object-cover"
-                src={`${process.env.REACT_APP_SERVER_BASE_URL}/uploads/${link}`}
+                src={`${axios.defaults.baseURL}/uploads/${link}`} // ✅ baseURL from instance
                 alt="Uploaded"
               />
 
