@@ -233,6 +233,9 @@ app.get("/bookings", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+app.get("/", (req, res) => {
+  res.send("✅ Server is running");
+});
 
 // ----------------- Start server -----------------
 app.listen(PORT, "0.0.0.0", () => {
