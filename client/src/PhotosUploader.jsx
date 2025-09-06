@@ -77,7 +77,7 @@ const PhotosUploader = ({ addedPhotos, onChange }) => {
             <div className="flex h-32 relative" key={link}>
               <img
                 className="rounded-2xl w-full object-cover"
-                src={`${axios.defaults.baseURL}/uploads/${link}`} // ✅ baseURL from instance
+                src={link}
                 alt="Uploaded"
               />
 
