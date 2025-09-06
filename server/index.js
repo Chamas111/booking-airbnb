@@ -51,6 +51,9 @@ function getUserDataFromToken(req) {
 }
 
 // Test routes
+app.get("/", (req, res) => {
+  res.send("Server is running ✅");
+});
 app.get("/test", (req, res) => res.json("Server is working"));
 app.get("/test-cors", (req, res) => res.json({ msg: "CORS works" }));
 app.get("/test-login-cors", (req, res) => {
