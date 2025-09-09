@@ -31,14 +31,11 @@ app.use(express.json());
 app.use(cookieParser());
 
 // ----------------- CORS -----------------
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  "https://bookingappl.netlify.app",
-];
+const allowedOrigins = [process.env.FRONTEND_URL || "http://localhost:3000"];
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin) return callback(null, true); // allow non-browser requests
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // allow Postman, curl
       if (!allowedOrigins.includes(origin)) {
         return callback(new Error("CORS not allowed"), false);
       }
@@ -95,9 +92,9 @@ app.post("/login", async (req, res) => {
     res
       .cookie("token", token, {
         httpOnly: true,
-        secure: true,
-        sameSite: "none",
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+        secure: process.env.NODE_ENV === "production", // only secure in prod
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        maxAge: 1000 * 60 * 60 * 24 * 7,
       })
       .json(user);
   } catch (err) {
@@ -130,7 +127,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Upload local files → Cloudinary
+// Local file upload → Cloudinary
 app.post("/upload", upload.array("photos", 100), async (req, res) => {
   try {
     const urls = [];
@@ -141,7 +138,7 @@ app.post("/upload", upload.array("photos", 100), async (req, res) => {
       urls.push(result.secure_url);
       fs.unlinkSync(file.path); // remove local file after uploading
     }
-    res.json(urls); // return full URLs
+    res.json(urls); // return full Cloudinary URLs
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Upload failed" });
@@ -155,7 +152,7 @@ app.post("/upload-by-link", async (req, res) => {
     const result = await cloudinary.uploader.upload(link, {
       folder: "bookingapp",
     });
-    res.json(result.secure_url); // return full URL
+    res.json(result.secure_url); // full URL
   } catch (err) {
     console.error(err);
     res.status(400).json({ error: "Cannot upload image from provided link" });
@@ -163,14 +160,70 @@ app.post("/upload-by-link", async (req, res) => {
 });
 
 // ----------------- Place routes -----------------
+// ----------------- Place routes -----------------
 app.post("/places", async (req, res) => {
+  const userData = await getUserDataFromToken(req);
+  if (!userData) return res.status(401).json("Not logged in");
+
+  const place = await Place.create({
+    ...req.body,
+    photos: req.body.addedPhotos || [],
+    owner: userData.id,
+  });
+  res.json(place);
+});
+
+app.put("/places", async (req, res) => {
   try {
     const userData = await getUserDataFromToken(req);
     if (!userData) return res.status(401).json("Not logged in");
 
-    const place = await Place.create({ ...req.body, owner: userData.id });
+    const { id, addedPhotos, ...rest } = req.body;
+
+    const place = await Place.findById(id);
+
+    if (place.owner.toString() !== userData.id) {
+      return res.status(403).json("You are not the owner");
+    }
+
+    Object.assign(place, {
+      ...rest,
+      photos: addedPhotos || [], // update photos
+    });
+
+    await place.save();
     res.json(place);
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/places/:id", async (req, res) => {
+  try {
+    const userData = await Place.findOneAndDelete({ _id: req.params.id });
+
+    res.json(deletedPlace);
+  } catch (err) {
+    res.status(500).json({ err: err.message });
+  }
+});
+
+app.delete("/user-places/:id", async (req, res) => {
+  try {
+    const userData = await getUserDataFromToken(req);
+    if (!userData) return res.status(401).json("Not logged in");
+
+    const place = await Place.findById(req.params.id);
+    if (!place) return res.status(404).json("Place not found");
+
+    if (place.owner.toString() !== userData.id) {
+      return res.status(403).json("You are not the owner of this place");
+    }
+
+    await Place.findByIdAndDelete(req.params.id);
+    res.json({ success: true, message: "Place deleted" });
+  } catch (err) {
+    console.error("❌ Delete error:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -187,9 +240,22 @@ app.get("/user-places", async (req, res) => {
   }
 });
 
+app.get("/user-places/:id", async (req, res) => {
+  try {
+    const place = await Place.findById(req.params.id);
+    // make sure photos field exists
+    if (!place.photos) place.photos = [];
+    res.json(place);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/places/:id", async (req, res) => {
   try {
     const place = await Place.findById(req.params.id);
+    // make sure photos field exists
+    if (!place.photos) place.photos = [];
     res.json(place);
   } catch (err) {
     res.status(500).json({ error: err.message });
