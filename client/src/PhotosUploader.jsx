@@ -12,7 +12,12 @@ const PhotosUploader = ({ addedPhotos, onChange }) => {
       const { data: url } = await axios.post("/upload-by-link", {
         link: photoLink,
       });
-      onChange((prev) => [...prev, url]);
+
+      onChange((prev) => {
+        const updated = [...prev, url]; // compute new array
+        console.log("Added photos now:", updated); // log here
+        return updated; // return the new array to update state
+      });
       setPhotoLink("");
     } catch (err) {
       console.error("❌ Upload by link failed:", err);
@@ -32,7 +37,12 @@ const PhotosUploader = ({ addedPhotos, onChange }) => {
       const { data: urls } = await axios.post("/upload", data, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      onChange((prev) => [...prev, ...urls]);
+
+      onChange((prev) => {
+        const updated = [...prev, ...urls]; // <-- spread here
+        console.log("Added photos now:", updated);
+        return updated;
+      });
     } catch (err) {
       console.error("❌ Upload failed:", err);
     } finally {

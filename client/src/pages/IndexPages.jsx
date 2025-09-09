@@ -18,10 +18,10 @@ export default function IndexPage() {
           <div key={place._id}>
             <Link to={"/place/" + place._id}>
               <div className="bg-gray-500 mb-2 rounded-2xl flex">
-                {place.addedPhotos?.[0] && (
+                {place.photos?.[0] && (
                   <img
                     className="rounded-2xl object-cover aspect-square"
-                    src={place.addedPhotos[0]} // ✅ full Cloudinary URL
+                    src={place.photos[0]} // ✅ use photos instead of addedPhotos
                     alt={place.title}
                   />
                 )}

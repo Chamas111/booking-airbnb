@@ -97,7 +97,7 @@ const BookingWidget = ({ place }) => {
         </div>
 
         <button onClick={bookThisPlace} className="primary mt-4">
-          {NumberOfNights > 0 && <span>${NumberOfNights * place.price}</span>}
+          {NumberOfNights > 0 && <span>${NumberOfNights * place.price}</span>}{" "}
           Book this place
         </button>
       </div>
